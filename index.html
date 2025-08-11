@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cosmonaut's Log</title>
+    
+    <!-- Google Fonts - Fira Code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === GLOBAL RESET & BASE STYLES === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Hide all scrollbars */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* === STARFIELD CANVAS === */
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.6;
+            pointer-events: none; /* Add this line */
+        }
+
+        /* === MAIN TEXT EDITOR === */
+        #editor {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 800px;
+            height: 80%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #FFA500;
+            font-family: 'Fira Code', monospace;
+            font-size: 16px;
+            line-height: 1.8;
+            resize: none;
+            z-index: 10;
+            caret-color: #FFA500;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        #editor::placeholder {
+            color: #FFA50033;
+            font-style: italic;
+        }
+
+        /* === CONTROL ICONS === */
+        .control-icon {
+            position: fixed;
+            bottom: 30px;
+            width: 24px;
+            height: 24px;
+            opacity: 0.4;
+            cursor: pointer;
+            z-index: 100;
+            transition: opacity 0.3s ease, filter 0.3s ease;
+            fill: #FFA500;
+        }
+
+        .control-icon:hover {
+            opacity: 1;
+            filter: drop-shadow(0 0 8px #FFA50066);
+        }
+
+
+        /* === SETTINGS PANEL === */
+        #settings-panel {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 280px;
+            height: 100%;
+            background: #222222;
+            z-index: 50;
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 40px 20px;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        #settings-panel.active {
+            right: 0;
+        }
+
+        .panel-title {
+            color: #FFA500;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+
+        /* === LEVER CONTROL === */
+        .lever-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .lever-label {
+            color: #FFA50080;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .lever-track {
+            width: 40px;
+            height: 120px;
+            background: #111;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .lever {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 120px;
+            height: 40px;
+            background: transparent;
+            outline: none;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            position: absolute;
+            top: 40px;
+            left: -40px;
+            cursor: grab;
+        }
+
+        .lever:active {
+            cursor: grabbing;
+        }
+
+        .lever::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #666, #444);
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            border: 2px solid #333;
+        }
+
+        .lever:active::-webkit-slider-thumb {
+            cursor: grabbing;
+            background: linear-gradient(135deg, #777, #555);
+        }
+
+        .lever::-moz-range-thumb {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #666, #444);
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+            border: 2px solid #333;
+        }
+
+        /* === VOLUME DIAL === */
+        .dial-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .dial-wrapper {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .dial {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #333, #222);
+            border-radius: 50%;
+            position: relative;
+            cursor: grab;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8), inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+            border: 3px solid #1a1a1a;
+        }
+
+        .dial:active {
+            cursor: grabbing;
+        }
+
+        .dial-indicator {
+            position: absolute;
+            width: 4px;
+            height: 30px;
+            background: #FFA500;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            transform-origin: center 30px;
+            pointer-events: none;
+            box-shadow: 0 0 8px #FFA50066;
+        }
+
+        .dial-marks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .dial-mark {
+            position: absolute;
+            width: 2px;
+            height: 8px;
+            background: #444;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            transform-origin: center 40px;
+        }
+
+        /* === CLOSE BUTTON === */
+        .close-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .close-panel:hover {
+            opacity: 1;
+        }
+
+        .close-panel::before,
+        .close-panel::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background: #FFA500;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .close-panel::after {
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        /* === NOTIFICATION === */
+        .notification {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1a1a1a;
+            color: #FFA500;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            z-index: 200;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        .notification.show {
+            opacity: 0.9;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .control-icon.loading {
+            opacity: 0.2;
+        }
+
+
+        /* === NEW WRAPPER FOR POSITIONING === */
+        .control-icon-wrapper {
+            position: fixed;
+            bottom: 70px;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        /* === MODIFIED ICON STYLES === */
+        /* (This now only styles the SVG itself) */
+        .control-icon {
+            width: 30px;
+            height: 30px;
+            opacity: 0.4;
+            transition: opacity 0.3s ease, filter 0.3s ease;
+            fill: #FFA500;
+            /* We removed position, bottom, right, z-index, and cursor from here */
+        }
+
+        /* (This now targets the icon when the wrapper is hovered) */
+        .control-icon-wrapper:hover .control-icon {
+            opacity: 1;
+            filter: drop-shadow(0 0 8px #FFA50066);
+        }
+
+        /* === INDIVIDUAL ICON POSITIONING === */
+        /* (This now positions the wrappers) */
+        .control-icon-wrapper[data-tooltip="Sounds of Earth"] {
+            right: 190px;
+        }
+        .control-icon-wrapper[data-tooltip="Apollo Radio"] {
+            right: 150px;
+        }
+        .control-icon-wrapper[data-tooltip="Settings"] {
+            right: 110px;
+        }
+        .control-icon-wrapper[data-tooltip="Save Log"] {
+            right: 70px;
+        }
+
+        /* === MODIFIED TOOLTIP STYLES === */
+        /* (All selectors now target the wrapper) */
+
+        /* The tooltip text bubble */
+        .control-icon-wrapper[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 180%; 
+            left: 50%;
+            transform: translateX(-50%);
+            
+            background: #222;
+            color: #FFA500;
+            font-size: 13px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            z-index: 1; /* This is still good practice */
+        }
+
+        /* The small triangle pointing to the icon */
+        .control-icon-wrapper[data-tooltip]::before {
+            content: '';
+            position: absolute;
+            bottom: calc(180% - 5px);
+            left: 50%;
+            transform: translateX(-50%);
+
+            border: 5px solid transparent;
+            border-top-color: #222;
+
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 1; /* This is still good practice */
+        }
+
+        /* Show the tooltip on hover */
+        .control-icon-wrapper[data-tooltip]:hover::after,
+        .control-icon-wrapper[data-tooltip]:hover::before {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Starfield Background -->
+    <canvas id="starfield"></canvas>
+    
+    <!-- Main Text Editor -->
+    <textarea id="editor" placeholder="Begin transmission..."></textarea>
+    
+    <!-- Control Icons -->
+    <div class="control-icon-wrapper" data-tooltip="Sounds of Earth">
+        <svg id="record-icon" class="control-icon loading" viewBox="0 0 24 24">
+            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,11A1,1 0 0,0 11,12A1,1 0 0,0 12,13A1,1 0 0,0 13,12A1,1 0 0,0 12,11Z" />
+        </svg>
+    </div>
+
+    <div class="control-icon-wrapper" data-tooltip="Apollo Radio">
+        <svg id="radio-icon" class="control-icon loading" viewBox="0 0 24 24">
+            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,12.94 19.83,13.83 19.54,14.66L14.66,19.54C13.83,19.83 12.94,20 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12C6,13.25 6.33,14.41 6.9,15.4L15.4,6.9C14.41,6.33 13.25,6 12,6M12,18A6,6 0 0,0 18,12C18,10.75 17.67,9.59 17.1,8.6L8.6,17.1C9.59,17.67 10.75,18 12,18Z" />
+        </svg>
+    </div>
+
+    <div class="control-icon-wrapper" data-tooltip="Settings">
+        <svg id="settings-icon" class="control-icon loading" viewBox="0 0 24 24">
+            <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.03-.32.07-.64.07-.97c0-.33-.04-.65-.07-.97l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.08-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.03.32-.07.64-.07.97c0 .33.04.65.07.97l-2.11 1.63c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.39 1.06.73 1.69.98l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.25 1.17-.59 1.69-.98l2.49 1c.22.08.49 0 .61-.22l2-3.46c.13-.22.07-.49-.12-.64l-2.11-1.63Z"/>
+        </svg>
+    </div>
+
+    <div class="control-icon-wrapper" data-tooltip="Save Log">
+        <svg id="save-icon" class="control-icon loading" viewBox="0 0 24 24">
+            <path d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7.414a2 2 0 0 0-.586-1.414l-2.414-2.414A2 2 0 0 0 16.586 3H5zm2 2h7v4h-4v-4h-3zm9 0h.586L19 7.414V19H5V5h2v4a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V5zm-4 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+        </svg>
+    </div>
+    
+    <!-- Settings Panel -->
+    <div id="settings-panel">
+        <div class="close-panel"></div>
+        <div class="panel-title">Control Systems</div>
+        
+        <!-- Font Size Lever -->
+        <div class="lever-container">
+            <div class="lever-label">Text Scale</div>
+            <div class="lever-track">
+                <input type="range" class="lever" id="font-lever" min="12" max="24" value="16">
+            </div>
+        </div>
+        
+
+        <div class="lever-container">
+            <div class="lever-label">Audio Level</div>
+            <div class="lever-track">
+                <input type="range" class="lever" id="volume-lever" min="-135" max="135" value="0">
+            </div>
+        </div>
+
+        <!-- Volume Dial -->
+        <div class="dial-container">
+            <div class="lever-label">Indicator</div>
+            <div class="dial-wrapper">
+                <div class="dial" id="volume-dial-display"> <div class="dial-indicator"></div>
+                    <div class="dial-marks">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // === STARFIELD ANIMATION ===
+        class Starfield {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.stars = [];
+                this.numStars = 150;
+                
+                this.resize();
+                this.createStars();
+                this.animate();
+                
+                window.addEventListener('resize', () => this.resize());
+            }
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            createStars() {
+                for (let i = 0; i < this.numStars; i++) {
+                    this.stars.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        size: Math.random() * 1.5 + 0.5,
+                        speed: Math.random() * 0.05 + 0.01,
+                        opacity: Math.random() * 0.8 + 0.2
+                    });
+                }
+            }
+            
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.stars.forEach(star => {
+                    // Slow drift
+                    star.x -= star.speed;
+                    
+                    // Wrap around
+                    if (star.x < 0) {
+                        star.x = this.canvas.width;
+                        star.y = Math.random() * this.canvas.height;
+                    }
+                    
+                    // Draw star
+                    this.ctx.fillStyle = `rgba(255, 165, 0, ${star.opacity})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // === AUDIO ENGINE ===
+        class AudioEngine {
+            constructor(app) {
+                this.app = app;
+                this.context = null;
+                this.masterGain = null;
+                this.buffers = {
+                    
+                    soundSprite: null,
+                    ambientDrones: [],  
+                    uiClick: null,
+                    uiSlider: null,
+                    radioChatter: [], // for Apollo Radio
+                    goldenRecord: []  // for Sounds of Earth
+                };
+                
+                this.keySoundDefinitions = {};
+                
+                this.soundPack = {
+                    config: '/sounds/config.json', // Path to your config.json
+                    audio: '/sounds/oreo.ogg',       // Path to your ogg file
+                    drones: [
+                        './sounds/stasis_draken.wav',
+                        './sounds/cosmos_pointpark.wav',
+                        './sounds/space_win_ztitchez.wav',
+                        './sounds/danieldouch__space-ship-drone.wav',
+                        './sounds/marb7e__dark-cold-main-menu-loop-mild-mountain-sickness-marb7e.wav',
+                        './sounds/nox_sound__atmosphere_drone_dark_loop_stereo.wav',
+                        './sounds/aleks41__dark_ambient.wav'
+                    ],
+                    click: './sounds/ui/crt.wav',
+                    slider: './sounds/ui/slider-hiss.wav',
+                    radio: [ 
+                            '.sounds/apollo/apollo_1.wav',
+                            './sounds/apollo/apollo_2.wav',
+                            './sounds/apollo/apollo_3.wav',
+                            './sounds/apollo/apollo_4.wav',
+                            './sounds/apollo/apollo_5.wav',
+                            './sounds/apollo/apollo_6.wav',
+                            './sounds/apollo/apollo_7.wav',
+                            './sounds/apollo/apollo_8.wav',
+                            './sounds/apollo/apollo_9.wav',
+                            './sounds/apollo/apollo_10.wav',
+                            './sounds/apollo/apollo_11.wav',
+                            './sounds/apollo/apollo_12.wav',
+
+                    ],
+                    // NEW: Paths to your Golden Record sound files
+                    record: [
+                        './sounds/record/Horse and Cart.wav',
+                        './sounds/record/Mud Pots.wav',
+                        './sounds/record/Tame Dog.wav',
+                        './sounds/record/Birds, Hyena, Elephant.wav',
+                        './sounds/record/Kiss, Mother and Child.wav',
+                        './sounds/record/Train.wav',
+                    ],            
+                };
+                
+                
+                this.volume = 0.5;
+                this.initialized = false;
+                
+                // Placeholder for audio sources
+                this.humSource = null;
+                this.isRadioPlaying = false; // Prevent sound overlap
+                this.isRecordPlaying = false; // Prevent sound overlap
+            }
+            
+            async init() {
+                if (this.initialized) return;
+                
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.context.createGain();
+                this.masterGain.connect(this.context.destination);
+                this.masterGain.gain.value = this.volume;
+                
+                // Create placeholder oscillators for demo
+                await this._loadSoundPack();
+                this.initialized = true;
+                
+                // Start the ambient hum
+                this.playRandomAmbientDrone();
+
+            }
+            
+            async _loadSoundPack() {
+                console.log('Loading all sound assets...');
+                // Helper function remains the same
+                const loadFile = async (url) => {
+                    try {
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status} for ${url}`);
+                        const arrayBuffer = await response.arrayBuffer();
+                        return await this.context.decodeAudioData(arrayBuffer);
+                    } catch (error) {
+                        console.error(`Failed to load file: ${url}`, error);
+                        return null; // Return null on failure instead of throwing
+                    }
+                };
+
+                try {
+                    // Load keyboard sounds first, as they are essential
+                    const configResponse = await fetch(this.soundPack.config);
+                    const configData = await configResponse.json();
+                    this.keySoundDefinitions = configData.defines;
+                    this.buffers.soundSprite = await loadFile(this.soundPack.audio);
+                    console.log('Keyboard sounds loaded.');
+
+                    // Load essential UI sounds
+                    this.buffers.uiClick = await loadFile(this.soundPack.click);
+                    this.buffers.uiSlider = await loadFile(this.soundPack.slider);
+                    console.log('UI sounds loaded.');
+
+                    // Load ambient drones
+                    const dronePromises = this.soundPack.drones.map(loadFile);
+                    this.buffers.ambientDrones = (await Promise.all(dronePromises)).filter(b => b);
+                    console.log(`${this.buffers.ambientDrones.length} ambient drones loaded.`);
+
+                    // Load radio chatter
+                    const radioPromises = this.soundPack.radio.map(loadFile);
+                    this.buffers.radioChatter = (await Promise.all(radioPromises)).filter(b => b);
+                    console.log(`${this.buffers.radioChatter.length} radio chatter files loaded.`);
+
+                    // Load golden record sounds
+                    const recordPromises = this.soundPack.record.map(loadFile);
+                    this.buffers.goldenRecord = (await Promise.all(recordPromises)).filter(b => b);
+                    console.log(`${this.buffers.goldenRecord.length} golden record files loaded.`);
+                    
+                    console.log('All sound assets finished loading.');
+
+                } catch (error) {
+                    // This will now only catch critical errors, like the config file failing
+                    console.error('A critical error occurred while loading sound assets:', error);
+                }
+            }
+            
+            playRandomAmbientDrone() {
+                if (!this.context || this.buffers.ambientDrones.length === 0) {
+                    console.log("No ambient drones to play.");
+                    return;
+                }
+
+                // 1. Pick a random buffer from our loaded drones
+                const randomIndex = Math.floor(Math.random() * this.buffers.ambientDrones.length);
+                const randomBuffer = this.buffers.ambientDrones[randomIndex];
+
+                // 2. Create a source node to play it
+                const source = this.context.createBufferSource();
+                source.buffer = randomBuffer;
+                source.connect(this.masterGain);
+                source.start();
+
+                // Keep track of the current sound source
+                this.humSource = source;
+
+                // 3. THIS IS THE KEY: When the sound finishes, call this function again
+                //    to play the next random track. This creates an endless, varied playlist.
+                source.onended = () => {
+                    console.log("Ambient track finished, starting next one.");
+                    this.playRandomAmbientDrone();
+                };
+            }
+           
+            playKeyPress(keyCode) {
+                // Check if everything is loaded and the key has a sound definition
+                if (!this.context || !this.buffers.soundSprite || !this.keySoundDefinitions[keyCode]) {
+                    return;
+                }
+
+                const definition = this.keySoundDefinitions[keyCode];
+                
+                // The definition contains [offset, duration] in milliseconds
+                const offsetInSeconds = definition[0] / 1000;
+                const durationInSeconds = definition[1] / 1000;
+
+                const source = this.context.createBufferSource();
+                source.buffer = this.buffers.soundSprite;
+                source.connect(this.masterGain);
+
+                // Start playing from the specified offset for the specified duration
+                source.start(this.context.currentTime, offsetInSeconds, durationInSeconds);
+            }
+            
+            playClick() {
+                if (!this.context || !this.buffers.uiClick) return;
+
+                const source = this.context.createBufferSource();
+                source.buffer = this.buffers.uiClick;
+                source.connect(this.masterGain);
+                source.start();
+            }
+            playSliderSound() {
+                if (!this.context || !this.buffers.uiSlider) return;
+
+                const source = this.context.createBufferSource();
+                source.buffer = this.buffers.uiSlider;
+                
+                // play slider sounds a bit quieter
+                const gainNode = this.context.createGain();
+                gainNode.gain.value = 0.6; 
+                source.connect(gainNode);
+                gainNode.connect(this.masterGain);
+                
+                source.start();
+            }
+
+            scheduleMechanicalTextures() {
+                const playRandomTexture = () => {
+                    if (!this.context) return;
+
+                    const now = this.context.currentTime;
+                    const soundType = Math.random(); // Decide which sound to make
+
+                    if (soundType < 0.5) {
+                        // --- Sound 1: Distant Beep ---
+                        const osc = this.context.createOscillator();
+                        const gain = this.context.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(400 + Math.random() * 400, now); // Random pitch
+                        gain.gain.setValueAtTime(0, now);
+                        gain.gain.linearRampToValueAtTime(0.1, now + 0.01); // Quick fade in
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2); // Fade out
+
+                        osc.connect(gain);
+                        gain.connect(this.masterGain);
+                        osc.start(now);
+                        osc.stop(now + 0.2);
+
+                    } 
+                    
+                    // Schedule the next sound at a random interval
+                    const nextDelay = 15000 + Math.random() * 30000; // 15-45 seconds
+                    setTimeout(playRandomTexture, nextDelay);
+                };
+                
+                // Start the cycle after a short initial delay
+                setTimeout(playRandomTexture, 10000);
+            }
+
+            playRadioChatter() {
+                if (this.isRadioPlaying || this.buffers.radioChatter.length === 0) return;
+                this.isRadioPlaying = true;
+                this.app.showNotification("Receiving transmission...");
+
+                const buffer = this.buffers.radioChatter[Math.floor(Math.random() * this.buffers.radioChatter.length)];
+                const source = this.context.createBufferSource();
+                source.buffer = buffer;
+
+                const filter = this.context.createBiquadFilter();
+                filter.type = "bandpass";
+                filter.frequency.setValueAtTime(1500, this.context.currentTime);
+                filter.Q.setValueAtTime(1, this.context.currentTime);
+
+                source.connect(filter);
+                filter.connect(this.masterGain);
+                source.start();
+                source.onended = () => { this.isRadioPlaying = false; };
+            }
+
+            // NEW: Method for Golden Record
+            playGoldenRecordSound() {
+                if (this.isRecordPlaying || this.buffers.goldenRecord.length === 0) return;
+                this.isRecordPlaying = true;
+                this.app.showNotification("Voyager signal acquired...");
+
+                const buffer = this.buffers.goldenRecord[Math.floor(Math.random() * this.buffers.goldenRecord.length)];
+                const source = this.context.createBufferSource();
+                source.buffer = buffer;
+                source.connect(this.masterGain);
+                source.start();
+                source.onended = () => { this.isRecordPlaying = false; };
+            }
+            setVolume(value) {
+                this.volume = value;
+                if (this.masterGain) {
+                    this.masterGain.gain.setValueAtTime(value, this.context.currentTime);
+                }
+            }
+        }
+
+        // === LOCAL STORAGE MANAGER ===
+        class StorageManager {
+            constructor() {
+                this.key = 'cosmonautLog';
+                this.saveInterval = 5000; // 5 seconds
+                this.lastSave = '';
+            }
+            
+            load() {
+                try {
+                    return localStorage.getItem(this.key) || '';
+                } catch (e) {
+                    console.warn('Failed to load from localStorage:', e);
+                    return '';
+                }
+            }
+            
+            save(content) {
+                try {
+                    if (content !== this.lastSave) {
+                        localStorage.setItem(this.key, content);
+                        this.lastSave = content;
+                    }
+                } catch (e) {
+                    console.warn('Failed to save to localStorage:', e);
+                }
+            }
+            
+            startAutoSave(editor) {
+                setInterval(() => {
+                    this.save(editor.value);
+                }, this.saveInterval);
+            }
+        }
+
+        // === MAIN APPLICATION ===
+        class CosmonautLog {
+            constructor() {
+                this.editor = document.getElementById('editor');
+                this.controlIcons = document.querySelectorAll('.control-icon');
+                this.settingsIcon = document.getElementById('settings-icon');
+                this.saveIcon = document.getElementById('save-icon');
+                this.radioIcon = document.getElementById('radio-icon'); 
+                this.recordIcon = document.getElementById('record-icon'); 
+                
+                this.settingsPanel = document.getElementById('settings-panel');
+                this.fontLever = document.getElementById('font-lever');
+                this.volumeLever = document.getElementById('volume-lever');
+                this.volumeDialDisplay = document.getElementById('volume-dial-display');
+                this.notification = document.getElementById('notification');
+                this.closePanel = document.querySelector('.close-panel');
+                
+                this.starfield = new Starfield(document.getElementById('starfield'));
+                this.audio = new AudioEngine(this);
+                this.storage = new StorageManager();
+                
+                this.dialRotation = 0; 
+                this.isDragging = false;
+                this.isFontSliding = false;
+                this.isVolumeSliding = false;
+                this.setupEventListeners();
+                this.init();
+            }
+            
+            async init() {
+                // Load saved content
+                this.editor.value = this.storage.load();
+                
+                // Start auto-save
+                this.storage.startAutoSave(this.editor);
+                this.volumeLever.value = this.dialRotation;
+                
+                // Initialize audio on first interaction
+                const audioPromise = new Promise(resolve => {
+                    document.addEventListener('click', () => {
+                        this.audio.init().then(resolve);
+                    }, { once: true });
+                });
+                
+                console.log("Application ready. Click to initialize audio.");
+                await audioPromise;
+                console.log("Audio initialized. Enabling controls.");
+
+                // Controls are now enabled ONLY after audio is loaded
+                this.controlIcons.forEach(icon => icon.classList.remove('loading'));
+                this.audio.scheduleMechanicalTextures(); 
+                this.volumeLever.value = this.dialRotation;
+            }
+            
+            setupEventListeners() {
+                // Editor keypress for audio
+                this.editor.addEventListener('keydown', (event) => {
+                    if (event.repeat) return; // Prevents sound on key-hold
+                    this.audio.playKeyPress(event.keyCode);
+                });
+                
+                // Save button
+                this.saveIcon.addEventListener('click', () => {
+                    this.saveToFile();
+                });
+                
+                // Settings toggle
+                this.settingsIcon.addEventListener('click', () => {
+                    this.toggleSettings();
+                });
+                
+                // Close panel
+                this.closePanel.addEventListener('click', () => {
+                    this.toggleSettings();
+                });
+                
+
+                this.recordIcon.addEventListener('click', () => {
+                    this.audio.playGoldenRecordSound();
+                });
+
+                this.radioIcon.addEventListener('click', () => {
+                    this.audio.playRadioChatter();
+                });
+
+                this.fontLever.addEventListener('input', (e) => {
+                    this.editor.style.fontSize = `${e.target.value}px`;
+                    // Throttle the sound
+                    if (!this.isFontSliding) {
+                        this.isFontSliding = true;
+                        this.audio.playSliderSound();
+                        setTimeout(() => { this.isFontSliding = false; }, 80); // Cooldown of 80ms
+                    }
+                });
+                
+                // --- MODIFIED VOLUME LEVER ---
+                this.volumeLever.addEventListener('input', (e) => {
+                    const newRotation = parseFloat(e.target.value);
+                    this.updateVolume(newRotation);
+                    // Throttle the sound
+                    if (!this.isVolumeSliding) {
+                        this.isVolumeSliding = true;
+                        this.audio.playSliderSound();
+                        setTimeout(() => { this.isVolumeSliding = false; }, 80); // Cooldown of 80ms
+                    }
+                });
+
+            }
+            
+            updateVolume(rotation) {
+                this.dialRotation = rotation;
+
+                // 1. Rotate the dial display
+                const indicator = this.volumeDialDisplay.querySelector('.dial-indicator');
+                indicator.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+
+                // 2. Set the audio engine volume
+                const volume = (rotation + 135) / 270;
+                this.audio.setVolume(volume);
+            }
+            
+            toggleSettings() {
+                this.settingsPanel.classList.toggle('active');
+                this.audio.playClick();
+            }
+            
+            saveToFile() {
+                const content = this.editor.value;
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, -1);
+                const filename = `log-${timestamp}.txt`;
+                
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showNotification('Log saved to file');
+                this.audio.playClick();
+            }
+            
+            showNotification(message) {
+                this.notification.textContent = message;
+                this.notification.classList.add('show');
+                
+                setTimeout(() => {
+                    this.notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // === INITIALIZE APPLICATION ===
+        window.addEventListener('DOMContentLoaded', () => {
+            new CosmonautLog();
+        });
+    </script>
+</body>
+</html>
